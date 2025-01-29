@@ -1,11 +1,4 @@
 [
-section
-]
-key = "amazon_analysis"
-enableCORS = false
-enableXsrfProtection = false
-
-[
 theme
 ]
 primaryColor = "#F63366"
