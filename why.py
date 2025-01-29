@@ -6,21 +6,21 @@ import requests
 import streamlit as st
 from transformers import pipeline
 
-API_KEY = "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" #Groq API Key
-SLACK_WEBHOOK = "https://hooks.slack.com/services/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" #Slack webhook url
+API_KEY = "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"  # Groq API Key
+SLACK_WEBHOOK = "https://hooks.slack.com/services/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"  # Slack webhook url
 
-# Truncate text to max length
 def truncate_text(text, max_length=512):
     return text[:max_length] if text else ""
 
-# Load Amazon data (scraped)
 def load_amazon_data():
+    """Load main Amazon scraped data."""
     try:
         data = pd.read_csv("amazon_scraped_data.csv")
-        # Convert price columns to numeric
+        # Convert price columns to numeric, removing any currency symbols and commas
         data['selling_price'] = pd.to_numeric(data['selling_price'].astype(str).str.replace(',', ''), errors='coerce')
         data['MRP'] = pd.to_numeric(data['MRP'].astype(str).str.replace(',', ''), errors='coerce')
         data['discount'] = pd.to_numeric(data['discount'].astype(str).str.replace('%', ''), errors='coerce')
+
         # Convert scrape_datetime to datetime
         data['scrape_datetime'] = pd.to_datetime(data['scrape_datetime'])
         return data
@@ -28,8 +28,8 @@ def load_amazon_data():
         st.error(f"Error loading Amazon data: {e}")
         return pd.DataFrame()
 
-# Load reviews data
 def load_reviews_data():
+    """Load reviews data from the reviews.csv file."""
     try:
         reviews = pd.read_csv("reviews.csv")
         reviews['scrape_datetime'] = pd.to_datetime(reviews['scrape_datetime'])
@@ -38,40 +38,40 @@ def load_reviews_data():
         st.error(f"Error loading reviews data: {e}")
         return pd.DataFrame()
 
-# Analyze sentiment of reviews
 def analyze_sentiment(reviews):
+    """Analyze customer sentiment for reviews."""
     sentiment_pipeline = pipeline("sentiment-analysis")
     truncated_reviews = [truncate_text(str(review)) for review in reviews]
     return sentiment_pipeline(truncated_reviews)
 
-# Simple price prediction based on moving average
 def simple_price_prediction(data, days=5):
+    """Simple price prediction based on moving average"""
     if len(data) < 2:
         return pd.DataFrame()
-        
+
     # Calculate average daily change
     data = data.sort_values('scrape_datetime')
     daily_changes = data['discount'].diff().mean()
-    
+
     last_date = data['scrape_datetime'].max()
     last_discount = data['discount'].iloc[-1]
-    
+
     future_dates = [last_date + timedelta(days=x) for x in range(1, days + 1)]
     predicted_discounts = [last_discount + (daily_changes * x) for x in range(1, days + 1)]
-    
+
     # Ensure discounts are within reasonable range (0-100)
     predicted_discounts = [min(max(0, d), 100) for d in predicted_discounts]
-    
+
     forecast_df = pd.DataFrame({
         'Date': future_dates,
         'Predicted_Discount': predicted_discounts
     })
     forecast_df.set_index('Date', inplace=True)
-    
+
     return forecast_df
 
-# Send data to Slack webhook
 def send_to_slack(data):
+    """Send data to Slack webhook."""
     try:
         payload = {"text": data}
         response = requests.post(
@@ -84,8 +84,8 @@ def send_to_slack(data):
         st.error(f"Error sending to Slack: {e}")
         return False
 
-# Generate strategy recommendations using Groq LLM
 def generate_strategy_recommendation(product_name, product_data, sentiment):
+    """Generate strategic recommendations using Groq LLM."""
     date = datetime.now()
     prompt = f"""
     You are a highly skilled business strategist specializing in e-commerce. Based on the following details, suggest actionable strategies to optimize pricing, promotions, and customer satisfaction for the selected product:
@@ -108,14 +108,24 @@ Provide your recommendations in a structured format:
 2. **Promotional Campaign Ideas**
 3. **Customer Satisfaction Recommendations**
     """
+
     try:
         data = {
             "messages": [{"role": "user", "content": prompt}],
             "model": "llama3-8b-8192",
             "temperature": 0,
         }
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
-        res = requests.post("https://api.groq.com/openai/v1/chat/completions", data=json.dumps(data), headers=headers)
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_KEY}"
+        }
+
+        res = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=json.dumps(data),
+            headers=headers
+        )
         res = res.json()
         return res["choices"][0]["message"]["content"]
     except Exception as e:
@@ -133,7 +143,7 @@ reviews_data = load_reviews_data()
 if amazon_data.empty:
     st.error("No Amazon data available. Please run the scraper first.")
 else:
-    # Sidebar for product selection
+    # Product selection
     st.sidebar.header("Select a Product")
     products = amazon_data['title'].unique().tolist()
     selected_product = st.sidebar.selectbox("Choose a product to analyze:", products)
@@ -144,7 +154,7 @@ else:
 
     # Display product information
     st.header(f"Analysis for {selected_product}")
-    
+
     # Product details
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -154,14 +164,21 @@ else:
     with col3:
         st.metric("Discount", f"{product_data['discount'].iloc[-1]}%")
 
-    # Resample data for 3-hour intervals
-    product_data.set_index('scrape_datetime', inplace=True)
-    product_data_resampled = product_data.resample('3H').mean().reset_index()
-
-    # Price history graph for every 3 hours
+    # Price history
     st.subheader("Price History (3-Hour Intervals)")
-    fig_price = px.line(product_data_resampled, x='scrape_datetime', y=['selling_price', 'MRP'], title="Price History Over Time")
-    st.plotly_chart(fig_price)
+
+    # Resample to 3-hour intervals
+    product_data.set_index('scrape_datetime', inplace=True)
+    numeric_columns = product_data.select_dtypes(include=['number']).columns
+    product_data_resampled = product_data[numeric_columns].resample('3H').mean()
+
+    # Reset index and plot
+    product_data_resampled = product_data_resampled.reset_index()
+    if not product_data_resampled.empty:
+        fig_price = px.line(product_data_resampled, x='scrape_datetime', y=['selling_price', 'MRP'], title="Price History Over Time (3-Hour Intervals)")
+        st.plotly_chart(fig_price)
+    else:
+        st.warning("No data available for the selected product at 3-hour intervals.")
 
     # Sentiment analysis
     if not product_reviews.empty:
