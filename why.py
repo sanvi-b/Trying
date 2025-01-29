@@ -17,10 +17,10 @@ def load_amazon_data():
     try:
         data = pd.read_csv("amazon_scraped_data.csv")
         # Convert price columns to numeric, removing any currency symbols and commas
-        data['selling_price'] = pd.to_numeric(data['selling_price'].str.replace(',', ''), errors='coerce')
-        data['MRP'] = pd.to_numeric(data['MRP'].str.replace(',', ''), errors='coerce')
-        # Convert discount to numeric, removing % symbol
-        data['discount'] = pd.to_numeric(data['discount'].str.replace('%', ''), errors='coerce')
+        data['selling_price'] = pd.to_numeric(data['selling_price'].astype(str).str.replace(',', ''), errors='coerce')
+        data['MRP'] = pd.to_numeric(data['MRP'].astype(str).str.replace(',', ''), errors='coerce')
+        data['discount'] = pd.to_numeric(data['discount'].astype(str).str.replace('%', ''), errors='coerce')
+
         # Convert scrape_datetime to datetime
         data['scrape_datetime'] = pd.to_datetime(data['scrape_datetime'])
         return data
