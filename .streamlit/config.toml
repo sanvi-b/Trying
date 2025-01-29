@@ -4,8 +4,8 @@ enableCORS = false
 enableXsrfProtection = false
 
 [theme]
-primaryColor = "#F63366"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
-font = "sans serif"
+primaryColor = "#4CAF50"  # Vibrant green for the primary color
+backgroundColor = "#FFFFFF"  # White background for a clean look
+secondaryBackgroundColor = "#F9FAFB"  # Light grey for secondary background for soft contrast
+textColor = "#333333"  # Dark grey text for better readability
+font = "Roboto, sans-serif"  # Clean and modern font for the text
