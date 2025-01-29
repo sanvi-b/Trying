@@ -1,7 +1,7 @@
 [
 section
 ]
-key = "value"
+key = "amazon_analysis"
 enableCORS = false
 enableXsrfProtection = false
 
