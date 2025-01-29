@@ -1,6 +1,7 @@
 [
-server
+section
 ]
+key = "value"
 enableCORS = false
 enableXsrfProtection = false
 
