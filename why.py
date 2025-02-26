@@ -6,8 +6,8 @@ import requests
 import streamlit as st
 from transformers import pipeline
 
-API_KEY = "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"  # Groq API Key
-SLACK_WEBHOOK = "https://hooks.slack.com/services/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"  # Slack webhook url
+API_KEY = ""  # Groq API Key
+SLACK_WEBHOOK = ""  # Slack webhook url
 
 def truncate_text(text, max_length=512):
     return text[:max_length] if text else ""
